@@ -4,8 +4,23 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { session, logout } from '$lib/stores/auth';
+	import { onMount } from 'svelte';
 
 	let { children }: { children: any } = $props();
+
+	let swReady = $state(false);
+
+	onMount(async () => {
+		const host = window.location.hostname;
+		if (host === 'localhost' || host === '127.0.0.1' || !navigator.serviceWorker) {
+			swReady = true;
+		} else if (navigator.serviceWorker.controller) {
+			swReady = true;
+		} else {
+			await navigator.serviceWorker.ready;
+			swReady = true;
+		}
+	});
 
 	let currentPath = $derived($page.url.pathname);
 	let isLoginPage = $derived(currentPath === '/login');
@@ -27,7 +42,11 @@
 	<title>JellyFolder</title>
 </svelte:head>
 
-{#if $session && !isLoginPage}
+{#if !swReady}
+	<div class="flex min-h-screen items-center justify-center">
+		<div class="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent"></div>
+	</div>
+{:else if $session && !isLoginPage}
 	<nav class="sticky top-0 z-40 border-b border-border/60 bg-surface-0/80 backdrop-blur-xl">
 		<div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5">
 			<a href="/libraries" class="group flex items-center gap-2.5">
@@ -54,4 +73,6 @@
 	</nav>
 {/if}
 
-{@render children()}
+{#if swReady}
+	{@render children()}
+{/if}
