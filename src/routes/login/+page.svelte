@@ -2,8 +2,10 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { login } from '$lib/stores/auth';
+	import { DEMO_SERVER } from '$lib/demo';
 
 	const SAVED_KEY = 'jf_saved_logins';
+	const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
 	interface SavedLogin {
 		serverUrl: string;
@@ -59,6 +61,19 @@
 		username = saved.username;
 		password = saved.password;
 		rememberMe = true;
+	}
+
+	async function tryDemo() {
+		error = '';
+		loading = true;
+		try {
+			await login(DEMO_SERVER, 'demo', '');
+			goto('/libraries');
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Demo failed';
+		} finally {
+			loading = false;
+		}
 	}
 
 	async function handleSubmit(e: Event) {
@@ -189,5 +204,21 @@
 				{loading ? 'Connecting...' : 'Connect'}
 			</button>
 		</form>
+
+		{#if DEMO_MODE}
+			<div class="mt-6 flex items-center gap-3">
+				<div class="h-px flex-1 bg-border/60"></div>
+				<span class="text-[12px] font-medium uppercase tracking-wider text-text-muted/60">or</span>
+				<div class="h-px flex-1 bg-border/60"></div>
+			</div>
+
+			<button
+				onclick={tryDemo}
+				disabled={loading}
+				class="mt-5 w-full rounded-xl border border-border bg-surface-1 px-4 py-3 text-[14px] font-medium text-text-secondary transition-all hover:border-accent/30 hover:bg-surface-2 focus:ring-2 focus:ring-accent/50 focus:ring-offset-2 focus:ring-offset-surface-0 focus:outline-none active:scale-[0.98] disabled:opacity-50"
+			>
+				Try Demo
+			</button>
+		{/if}
 	</div>
 </div>

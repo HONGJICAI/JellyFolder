@@ -8,9 +8,11 @@
 
 	let { children }: { children: any } = $props();
 
-	let swReady = $state(false);
+	const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+	let swReady = $state(!DEMO_MODE);
 
 	onMount(async () => {
+		if (!DEMO_MODE) return;
 		const host = window.location.hostname;
 		if (host === 'localhost' || host === '127.0.0.1' || !navigator.serviceWorker) {
 			swReady = true;
