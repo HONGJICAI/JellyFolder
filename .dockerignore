@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+.svelte-kit
+.vscode
+node_modules
+build
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
+README.md
+CLAUDE.md
+scripts
