@@ -8,7 +8,7 @@
 
 	let { children }: { children: any } = $props();
 
-	const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+	const DEMO_MODE = import.meta.env.MODE === 'demo';
 	let swReady = $state(!DEMO_MODE);
 
 	onMount(async () => {

@@ -5,7 +5,7 @@
 	import { DEMO_SERVER } from '$lib/demo';
 
 	const SAVED_KEY = 'jf_saved_logins';
-	const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+	const DEMO_MODE = import.meta.env.MODE === 'demo';
 
 	interface SavedLogin {
 		serverUrl: string;

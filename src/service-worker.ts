@@ -3,7 +3,7 @@ declare let self: ServiceWorkerGlobalScope;
 
 import { DEMO_HOST, handleDemoRequest } from '$lib/demo';
 
-if (import.meta.env.VITE_DEMO_MODE === 'true') {
+if (import.meta.env.MODE === 'demo') {
 	self.addEventListener('install', () => {
 		self.skipWaiting();
 	});
