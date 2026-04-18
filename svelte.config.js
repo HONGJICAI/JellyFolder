@@ -15,13 +15,8 @@ const config = {
 	},
 	kit: {
 		adapter: adapter({
-			fallback: '404.html' // GitHub Pages serves 404.html for unknown routes, acts as SPA fallback
-		}),
-		paths: {
-			// Set to repo name for GitHub Pages (https://username.github.io/JellyFolder/)
-			// Remove or set to '' for custom domain or root deployment
-			base: process.env.BASE_PATH || ''
-		}
+			fallback: '404.html' // SPA fallback for unknown routes
+		})
 	}
 };
 

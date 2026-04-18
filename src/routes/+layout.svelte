@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import '$lib/demo-init';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -8,20 +9,43 @@
 
 	let { children }: { children: any } = $props();
 
-	const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
-	let swReady = $state(!DEMO_MODE);
+	const DEMO = import.meta.env.MODE === 'demo';
+	let swReady = $state(!DEMO);
 
-	onMount(async () => {
-		if (!DEMO_MODE) return;
-		const host = window.location.hostname;
-		if (host === 'localhost' || host === '127.0.0.1' || !navigator.serviceWorker) {
+	onMount(() => {
+		if (!DEMO || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
 			swReady = true;
-		} else if (navigator.serviceWorker.controller) {
-			swReady = true;
-		} else {
-			await navigator.serviceWorker.ready;
-			swReady = true;
+			return;
 		}
+		if (navigator.serviceWorker.controller) {
+			sessionStorage.removeItem('jf_sw_reload');
+			swReady = true;
+			return;
+		}
+
+		// No controller on this page load. Two possible causes:
+		//   1. First visit — SW is installing. Wait for `controllerchange`.
+		//   2. Hard refresh (Ctrl+Shift+R) — Chrome bypassed the SW for this navigation
+		//      even though an active registration exists. `controllerchange` will not
+		//      fire. Recovery: trigger one normal reload, which goes through the SW.
+		(async () => {
+			const reg = await navigator.serviceWorker.getRegistration();
+			if (reg?.active && !sessionStorage.getItem('jf_sw_reload')) {
+				sessionStorage.setItem('jf_sw_reload', '1');
+				window.location.reload();
+				return;
+			}
+
+			const onChange = () => {
+				if (navigator.serviceWorker.controller) {
+					sessionStorage.removeItem('jf_sw_reload');
+					swReady = true;
+				}
+			};
+			navigator.serviceWorker.addEventListener('controllerchange', onChange);
+			// Safety net: don't hang forever if SW fails to claim.
+			setTimeout(() => (swReady = true), 3000);
+		})();
 	});
 
 	let currentPath = $derived($page.url.pathname);
