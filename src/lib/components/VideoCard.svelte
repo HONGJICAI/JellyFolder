@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { BaseItemDto } from '$lib/api/types';
 	import { formatDuration } from '$lib/utils/format';
+	import { scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import ActionButton from './ActionButton.svelte';
 
 	let {
@@ -57,6 +59,7 @@
 	);
 	let savingPlayed = $state(false);
 	let savingFavorite = $state(false);
+	let deleting = $state(false);
 	let showConfirmDelete = $state(false);
 	let deleted = $state(false);
 	let deleteError = $state('');
@@ -105,17 +108,23 @@
 	let imgFailed = $state(false);
 
 	async function handleDelete() {
+		if (deleting) return;
+		deleting = true;
 		try {
 			await deleteItem(video.Id);
 			deleted = true;
 		} catch (err) {
 			deleteError = err instanceof Error ? err.message : 'Delete failed';
+		} finally {
+			deleting = false;
 		}
 	}
 </script>
 
 {#if !deleted}
-<div class="group relative overflow-hidden rounded-2xl border border-border/40 bg-surface-1 transition-all duration-300 hover:border-border-hover hover:shadow-xl hover:shadow-black/20"
+<div
+	out:scale={{ duration: 250, start: 0.85, opacity: 0, easing: cubicOut }}
+	class="group relative overflow-hidden rounded-2xl border border-border/40 bg-surface-1 transition-all duration-300 hover:border-border-hover hover:shadow-xl hover:shadow-black/20"
 	class:opacity-50={played && !loadingUserData}
 >
 	<button
@@ -241,9 +250,18 @@
 						</button>
 						<button
 							onclick={handleDelete}
-							class="rounded-lg bg-danger px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-danger/80"
+							disabled={deleting}
+							class="inline-flex items-center gap-1.5 rounded-lg bg-danger px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-danger/80 disabled:opacity-70"
 						>
-							Delete
+							{#if deleting}
+								<svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+								</svg>
+								Deleting
+							{:else}
+								Delete
+							{/if}
 						</button>
 					</div>
 				{/if}

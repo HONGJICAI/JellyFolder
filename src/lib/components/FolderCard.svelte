@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { BaseItemDto } from '$lib/api/types';
 	import { navigateToFolder } from '$lib/stores/breadcrumbs';
-	import ActionButton from './ActionButton.svelte';
+	import { scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 
 	let {
 		folder,
@@ -27,6 +28,8 @@
 	let unplayed = $derived(folder.UserData?.UnplayedItemCount ?? 0);
 	let allWatched = $derived(countsReady && unplayed === 0);
 	let favorite = $state(folder.UserData?.IsFavorite ?? false);
+	let savingFavorite = $state(false);
+	let deleting = $state(false);
 	let showConfirmDelete = $state(false);
 	let deleted = $state(false);
 	let deleteError = $state('');
@@ -34,8 +37,10 @@
 	async function toggleFavorite(e: Event) {
 		e.preventDefault();
 		e.stopPropagation();
+		if (savingFavorite) return;
 		const was = favorite;
 		favorite = !favorite;
+		savingFavorite = true;
 		try {
 			if (favorite) {
 				await markFavorite(folder.Id);
@@ -44,6 +49,8 @@
 			}
 		} catch {
 			favorite = was;
+		} finally {
+			savingFavorite = false;
 		}
 	}
 
@@ -63,11 +70,15 @@
 	async function handleDelete(e: Event) {
 		e.preventDefault();
 		e.stopPropagation();
+		if (deleting) return;
+		deleting = true;
 		try {
 			await deleteItem(folder.Id);
 			deleted = true;
 		} catch (err) {
 			deleteError = err instanceof Error ? err.message : 'Delete failed';
+		} finally {
+			deleting = false;
 		}
 	}
 </script>
@@ -75,7 +86,8 @@
 {#if !deleted}
 <a
 	href="/browse/{folder.Id}"
-	onclick={() => navigateToFolder(folder.Id, folder.Name)}
+	onclick={(e) => { if (deleting) { e.preventDefault(); return; } navigateToFolder(folder.Id, folder.Name); }}
+	out:scale={{ duration: 250, start: 0.85, opacity: 0, easing: cubicOut }}
 	class="group relative block overflow-hidden rounded-2xl border border-border/40 bg-surface-1 transition-all duration-300 hover:border-border-hover hover:shadow-xl hover:shadow-black/20 hover:-translate-y-0.5"
 >
 	<div class="aspect-video w-full overflow-hidden bg-surface-2">
@@ -110,15 +122,23 @@
 	<div class="absolute top-3 left-3 flex gap-1.5">
 		<button
 			onclick={toggleFavorite}
+			disabled={savingFavorite}
 			title={favorite ? 'Remove from favorites' : 'Add to favorites'}
 			class="flex h-7 w-7 items-center justify-center rounded-full backdrop-blur-sm transition-all duration-200
 				{favorite
 				? 'bg-red-500/80 text-white shadow-lg shadow-red-500/20'
 				: 'bg-black/30 text-white/60 opacity-0 group-hover:opacity-100 hover:bg-black/50 hover:text-white'}"
 		>
-			<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill={favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2.5">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-			</svg>
+			{#if savingFavorite}
+				<svg class="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+					<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+				</svg>
+			{:else}
+				<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill={favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2.5">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+				</svg>
+			{/if}
 		</button>
 
 		<button
@@ -174,9 +194,18 @@
 						</button>
 						<button
 							onclick={handleDelete}
-							class="rounded-lg bg-danger px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-danger/80"
+							disabled={deleting}
+							class="inline-flex items-center gap-1.5 rounded-lg bg-danger px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-danger/80 disabled:opacity-70"
 						>
-							Delete
+							{#if deleting}
+								<svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+								</svg>
+								Deleting
+							{:else}
+								Delete
+							{/if}
 						</button>
 					</div>
 				{/if}
